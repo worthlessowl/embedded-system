@@ -19,6 +19,7 @@ static portTASK_FUNCTION_PROTO(vBlinkLed0, p_);
 static portTASK_FUNCTION_PROTO(vBlinkLed1, q_);
 static portTASK_FUNCTION_PROTO(vCounter, r_);
 static portTASK_FUNCTION_PROTO(vPushButton1, s_);
+static portTASK_FUNCTION_PROTO(vReset, t_);
 
 /* Define semaphore */
 SemaphoreHandle_t xSemaphore;
@@ -36,10 +37,10 @@ int main (void)
 	gfx_mono_draw_string("RTOS v10.2.1", 0, 0, &sysfont);
 
 	/* Create the task */
-	
-	xTaskCreate(vBlinkLed0, "", 1000, NULL, tskIDLE_PRIORITY + 1, NULL);	// higher priority
-	xTaskCreate(vBlinkLed1, "", 1000, NULL, tskIDLE_PRIORITY + 2, NULL);	// higher priority
-	xTaskCreate(vPushButton1, "", 1000, NULL, tskIDLE_PRIORITY + 3, NULL);	// higher priority
+	xTaskCreate(vReset, "", 1000, NULL, tskIDLE_PRIORITY + 1, NULL);	// higher priority
+	xTaskCreate(vBlinkLed0, "", 1000, NULL, tskIDLE_PRIORITY + 2, NULL);	// higher priority
+	xTaskCreate(vBlinkLed1, "", 1000, NULL, tskIDLE_PRIORITY + 3, NULL);	// higher priority
+	xTaskCreate(vPushButton1, "", 1000, NULL, tskIDLE_PRIORITY + 4, NULL);	// higher priority
 	xTaskCreate(vCounter, "", 1000, NULL, tskIDLE_PRIORITY, NULL);			// low priority
 	
 	/* Semaphore */
@@ -109,4 +110,22 @@ static portTASK_FUNCTION(vCounter, r_) {
 		
 		vTaskDelay(100/portTICK_PERIOD_MS);
 	}	
+}
+
+static portTASK_FUNCTION(vReset, t_) {
+	char strbuf[128];
+	int flagLed1 = 0;
+	
+	while(1) {
+		if(ioport_get_pin_level(GPIO_PUSH_BUTTON_0)==0){
+			if(xSemaphoreTake(xSemaphore, (TickType_t) 10) == pdTRUE) {
+				counter = 0;
+				snprintf(strbuf, sizeof(strbuf), "Counter : %d", counter);
+				gfx_mono_draw_string(strbuf,0, 8, &sysfont);
+				xSemaphoreGive(xSemaphore);
+				
+			}
+		}
+		vTaskDelay(100/portTICK_PERIOD_MS);
+	}
 }
